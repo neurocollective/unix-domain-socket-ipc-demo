@@ -63,43 +63,36 @@ const report = (resultsObject) => {
 	console.log(formatted);
 }
 
+const testWithRepetition = (key, requestFunction, promisesList) => {
+
+	console.log(`starting ${key} repetitions...`);
+
+	for (let i = 0; i < repetitions; i++) {
+
+		console.log(`${key} ${i + 1}`);
+		const start = getSeconds();
+
+		const promise = requestFunction().then((response) => {
+			const end = getSeconds();
+			results[key].entries.push({ start, end, response, duration: end - start });
+		});
+		promisesList.push(promise);
+	}	
+}
+
 const main = async () => {
 	const globalStart = getSeconds();
 
-	console.log('starting unix repetitions...');
-	for (let i = 0; i < repetitions; i++) {
+	const promises = [];
 
-		console.log(`unix ${i + 1}`);
-		const start = getSeconds();
+	testWithRepetition('unix', unixRequest, promises);
 
-		let response;
-		try {
-			response = await unixRequest();
-		} catch (error) {
-			console.log(`error: ${error.message}`);
-			continue
-		}
+	testWithRepetition('localhost', localhostRequest, promises);
 
-		const end = getSeconds();
-		results.unix.entries.push({ start, end, response, duration: end - start });
-	}
-
-	console.log('starting localhost repetitions...');
-	for (let n = 0; n < repetitions; n++) {
-
-		console.log(`localhost ${n + 1}`);
-		const start = getSeconds();
-
-		let response;
-		try {
-			response = await localhostRequest();
-		} catch (error) {
-			console.log(`error: ${error.message}`);
-			continue
-		}
-
-		const end = getSeconds();
-		results.localhost.entries.push({ start, end, response, duration: end - start });
+	try {
+		await Promise.all(promises);
+	} catch (error) {
+		console.log(error);
 	}
 
 	const globalEnd = getSeconds();
