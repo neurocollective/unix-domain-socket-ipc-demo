@@ -73,6 +73,7 @@ const testWithRepetition = (key, requestFunction, promisesList) => {
 		const start = getSeconds();
 
 		const promise = requestFunction().then((response) => {
+			console.log(`request ${key} ${i} succeeded`);
 			const end = getSeconds();
 			results[key].entries.push({ start, end, response, duration: end - start });
 		});

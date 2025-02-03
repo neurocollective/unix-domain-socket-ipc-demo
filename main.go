@@ -1,7 +1,7 @@
 package main
 
 import (
-	//"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"log"
 	"net"
@@ -10,25 +10,9 @@ import (
 	"io"
 )
 
-// func main() {
-
-// 	// PORT := os.Getenv("PORT")
-
-// 	router := gin.Default()
-
-// 	router.Get("/", func(c *gin.Context) {
-// 		c.JSON(http.StatusOK, gin.H{
-// 			"status": "OK"
-// 		})
-// 	})
-
-// 	router.Listen()
-// }
-
 type MakeRequest func (method string, url string, body io.Reader) (string, error)
 
 func buildUnixRequest() MakeRequest  {
-	// client := new(http.Client)
 
     connection, err := net.Dial("unix", "/tmp/test.sock")
     if err != nil {
@@ -97,54 +81,40 @@ func buildLocalhostRequest() MakeRequest {
 
 func main() {
 
+	router := gin.Default()
+
 	unixRequest := buildUnixRequest()
 	localhostRequest := buildLocalhostRequest()
 
-	http.HandleFunc("/unix", func(w http.ResponseWriter, r *http.Request) {
-		//fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
+	router.GET("/unix", func(c *gin.Context) {
 
 		responseString, err := unixRequest(http.MethodGet, "localhost:3000", nil)
 
 		if err != nil {
-			log.Fatal(err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H {
+				"error": err.Error(),
+			})
+			return
 		}
-
-		log.Println(responseString)
-
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			log.Println(err.Error())
-			io.WriteString(w, "\"status\": \"error\"")			
-		} else {
-			w.Header().Set("Content-Type", "application/json")
-			io.WriteString(w, responseString)
-		}
+		c.JSON(http.StatusOK, gin.H {
+			"data": responseString,
+		})
 	})
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		//fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
+	router.GET("/", func(c *gin.Context) {
 
 		responseString, err := localhostRequest(http.MethodGet, "localhost:3000", nil)
 
 		if err != nil {
-			log.Fatal(err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H {
+				"error": err.Error(),
+			})
+			return
 		}
-
-		log.Println(responseString)
-
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			log.Println(err.Error())
-			io.WriteString(w, "\"status\": \"error\"")			
-		} else {
-			w.Header().Set("Content-Type", "application/json")
-			io.WriteString(w, responseString)
-		}
+		c.JSON(http.StatusOK, gin.H {
+			"data": responseString,
+		})
 	})
 
-	err := http.ListenAndServe(":8080", nil)
-
-	if err != nil {
-		log.Fatal(err)
-	}
+	router.Run()
 }
