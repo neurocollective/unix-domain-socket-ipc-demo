@@ -12,19 +12,11 @@ import (
 
 type MakeRequest func (method string, url string, body io.Reader) (string, error)
 
-func buildUnixRequest() MakeRequest  {
+func buildUnixRequest(socketPath string, client any) MakeRequest  {
 
-    connection, err := net.Dial("unix", "/tmp/test.sock")
+    connection, err := net.Dial("unix", socketPath)
     if err != nil {
         log.Fatal(err)
-    }
-
-    client := http.Client{
-        Transport: &http.Transport{
-            DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-                return connection, nil
-            },
-        },
     }
 
     return func (method string, url string, body io.Reader) (string, error) { 
@@ -51,9 +43,7 @@ func buildUnixRequest() MakeRequest  {
 	}
 }
 
-func buildLocalhostRequest() MakeRequest {
-
-    client := http.Client{}
+func buildLocalhostRequest(client any) MakeRequest {
 
     return func (method string, url string, body io.Reader) (string, error) {
 
@@ -83,8 +73,16 @@ func main() {
 
 	router := gin.Default()
 
-	unixRequest := buildUnixRequest()
-	localhostRequest := buildLocalhostRequest()
+    unixClient := http.Client{
+        Transport: &http.Transport{
+            DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+                return connection, nil
+            },
+        },
+    }
+
+	unixRequest := buildUnixRequest("/tmp/test.sock", unixClient)
+	localhostRequest := buildLocalhostRequest(http.Client{})
 
 	router.GET("/unix", func(c *gin.Context) {
 

@@ -4,15 +4,15 @@ const unix = express();
 const app = express();
 
 const {
-	env: {
-		UNIX_DOMAIN_SOCKET_PATH: socketPath = '/tmp/test.sock',
-		PORT = '3000'
-	}
+  env: {
+    UNIX_DOMAIN_SOCKET_PATH: socketPath = '/tmp/test.sock',
+    PORT = '3000'
+  }
 } = process;
 
 const handler = (_, res) => {
-	console.log(`getting request at ${new Date()}`)
-	return res.json({ status: 'hi' });
+  console.log(`getting request at ${new Date()}`)
+  return res.json({ status: 'hi' });
 };
 
 unix.use(express.json());
