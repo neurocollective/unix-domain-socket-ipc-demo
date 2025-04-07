@@ -14,12 +14,14 @@ try {
 
 const headers = {
   'Content-Type': 'application/json',
+  'Accept': 'application/json',
 };
 
-const request = url => fetch(url, { headers }).then(r => r.json());
+const options = { method: 'POST', headers, body: JSON.stringify({ test: 'bruh' }) };
+const request = url => fetch(url, options).then(r => r.json());
 
-const unixRequest = () => request('http://localhost:8080/unix');
-const localhostRequest = () => request('http://localhost:8080/');
+const unixRequest = () => request('http://localhost:3000/unix');
+const localhostRequest = () => request('http://localhost:3000/');
 const getSeconds = () => new Date().getTime();
 
 const results = {

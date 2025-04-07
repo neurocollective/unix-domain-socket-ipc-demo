@@ -4,4 +4,4 @@ dev:
 docker/build:
 	docker build -t go-n-node .
 docker/run:
-	docker run -p 8080:8080 go-n-node
+	docker run -p 3000:3000 go-n-node
