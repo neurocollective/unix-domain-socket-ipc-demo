@@ -1,122 +1,90 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
-	"net/http"
-	"log"
-	"net"
-	//"bytes"
-	"context"
-	"io"
+  "net/http"
+  "fmt"
+  "net"
+  "os"
+  "io"
 )
 
 type Doer interface {
-	Do(*http.Request) (*http.Response, error)
+  Do(*http.Request) (*http.Response, error)
 }
 
-type MakeRequest func (method string, url string, body io.Reader) (string, error)
+type RequestHandler struct {
+  Name string
+}
+  
+func (r *RequestHandler) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
 
-func buildUnixRequest(client Doer) MakeRequest  {
+  fmt.Println(r.Name, "getting a request...")
 
-    return func (method string, url string, body io.Reader) (string, error) { 
+  bodyBytes, err := io.ReadAll(req.Body)
 
-		req, err := http.NewRequest(http.MethodGet, "http://localhost/unix", nil)
 
-		if err != nil {
-			return "", err
-		}
+  writer.Header().Set("Accept", "application/json")
+  writer.Header().Set("Content-Type", "application/json")
 
-		res, err := client.Do(req)
+  if err != nil {
+    writer.WriteHeader(http.StatusInternalServerError)
+    io.WriteString(writer, "{ \"status\": \"error\", \"error\": \"" + err.Error() + "\"}")
+    return 
+  }
 
-		if err != nil {
-			return "", err
-		}
+  fmt.Println("request body is:", string(bodyBytes))
 
-		bodyBytes, err := io.ReadAll(res.Body)
-
-		if err != nil {
-			return "", err
-		}
-
-		return string(bodyBytes), nil
-	}
+  writer.WriteHeader(http.StatusOK)
+  io.WriteString(writer, "{ \"status\": \"ok\"}") 
 }
 
-func buildLocalhostRequest(client Doer) MakeRequest {
+func ListenUnix(listener net.Listener, handlerUnix http.Handler) {
+  err := http.Serve(listener, handlerUnix)
+  if err.Error() != "" {
+    panic(err)
+  }
+}
 
-    return func (method string, url string, body io.Reader) (string, error) {
-
-		req, err := http.NewRequest(http.MethodGet, "http://localhost:3000", nil)
-
-		if err != nil {
-			return "", err
-		}
-
-		res, err := client.Do(req)
-
-		if err != nil {
-			return "", err
-		}
-
-		bodyBytes, err := io.ReadAll(res.Body)
-
-		if err != nil {
-			return "", err
-		}
-
-		return string(bodyBytes), nil
-	}
+func ListenHttp(listener net.Listener, handlerHttp http.Handler) {
+  err := http.Serve(listener, handlerHttp)
+  if err.Error() != "" {
+    panic(err)
+  }
 }
 
 func main() {
 
-	router := gin.Default()
+  socket := os.Getenv("SOCKET_PATH")
 
-    connection, err := net.Dial("unix", "/tmp/test.sock")
-    if err != nil {
-        log.Fatal(err)
-    }
+  if socket == "" {
+    socket = "/tmp/test.sock"
+  }
 
-    unixClient := http.Client{
-        Transport: &http.Transport{
-            DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-                return connection, nil
-            },
-        },
-    }
+  port := os.Getenv("PORT")
 
-	unixRequest := buildUnixRequest(&unixClient)
-	localhostRequest := buildLocalhostRequest(&http.Client{})
+  if port == "" {
+    port = "8080"
+  }
 
-	router.GET("/unix", func(c *gin.Context) {
+  handlerUnix := RequestHandler{ Name: "unix" }
 
-		responseString, err := unixRequest(http.MethodGet, "localhost:3000", nil)
+  listener, err := net.Listen("unix", socket)
+  if err != nil {
+      panic(err)
+  }
 
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H {
-				"error": err.Error(),
-			})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H {
-			"data": responseString,
-		})
-	})
+  fmt.Println("golang listening on unix socket", socket, "...")
+  go ListenUnix(listener, &handlerUnix)
 
-	router.GET("/", func(c *gin.Context) {
+  handlerHttp := RequestHandler{ Name: "http" }
 
-		responseString, err := localhostRequest(http.MethodGet, "localhost:3000", nil)
+  listenerHttp, err := net.Listen("tcp", "127.0.0.1:" + port)
+  if err != nil {
+      panic(err)
+  }
 
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H {
-				"error": err.Error(),
-			})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H {
-			"data": responseString,
-		})
-	})
+  go ListenHttp(listenerHttp, &handlerHttp)
+  fmt.Println("golang listening on http port ", port, "...")
 
-	router.Run()
+  select {}
 }

@@ -5,7 +5,7 @@ const app = express();
 
 const {
   env: {
-    UNIX_DOMAIN_SOCKET_PATH: socketPath = '/tmp/test.sock',
+    // UNIX_DOMAIN_SOCKET_PATH: socketPath = '/tmp/test.sock',
     PORT = '3000'
   }
 } = process;
