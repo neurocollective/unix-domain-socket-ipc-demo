@@ -22,7 +22,6 @@ func (r *RequestHandler) ServeHTTP(writer http.ResponseWriter, req *http.Request
 
   bodyBytes, err := io.ReadAll(req.Body)
 
-
   writer.Header().Set("Accept", "application/json")
   writer.Header().Set("Content-Type", "application/json")
 
